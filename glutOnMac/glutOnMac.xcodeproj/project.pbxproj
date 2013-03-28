@@ -1,0 +1,236 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		3753D2E81703EDD6008C6901 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3753D2E71703EDD6008C6901 /* main.cpp */; };
+		3753D2F11703F330008C6901 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3753D2F01703F330008C6901 /* OpenGL.framework */; settings = {ATTRIBUTES = (Required, ); }; };
+		3753D2F31703F353008C6901 /* GLUT.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3753D2F21703F353008C6901 /* GLUT.framework */; };
+		3753D2F61703F5BD008C6901 /* render.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3753D2F41703F5BD008C6901 /* render.cpp */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		3753D2E21703EDD6008C6901 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		3753D2E41703EDD6008C6901 /* glutOnMac */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = glutOnMac; sourceTree = BUILT_PRODUCTS_DIR; };
+		3753D2E71703EDD6008C6901 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		3753D2F01703F330008C6901 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = ../../../../../../../System/Library/Frameworks/OpenGL.framework; sourceTree = "<group>"; };
+		3753D2F21703F353008C6901 /* GLUT.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GLUT.framework; path = ../../../../../../../System/Library/Frameworks/GLUT.framework; sourceTree = "<group>"; };
+		3753D2F41703F5BD008C6901 /* render.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = render.cpp; sourceTree = "<group>"; };
+		3753D2F51703F5BD008C6901 /* render.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = render.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		3753D2E11703EDD6008C6901 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3753D2F11703F330008C6901 /* OpenGL.framework in Frameworks */,
+				3753D2F31703F353008C6901 /* GLUT.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		3753D2DB1703EDD5008C6901 = {
+			isa = PBXGroup;
+			children = (
+				3753D2E61703EDD6008C6901 /* glutOnMac */,
+				3753D2E51703EDD6008C6901 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		3753D2E51703EDD6008C6901 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				3753D2E41703EDD6008C6901 /* glutOnMac */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		3753D2E61703EDD6008C6901 /* glutOnMac */ = {
+			isa = PBXGroup;
+			children = (
+				3753D2F21703F353008C6901 /* GLUT.framework */,
+				3753D2E71703EDD6008C6901 /* main.cpp */,
+				3753D2F01703F330008C6901 /* OpenGL.framework */,
+				3753D2F41703F5BD008C6901 /* render.cpp */,
+				3753D2F51703F5BD008C6901 /* render.h */,
+			);
+			path = glutOnMac;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		3753D2E31703EDD6008C6901 /* glutOnMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3753D2ED1703EDD6008C6901 /* Build configuration list for PBXNativeTarget "glutOnMac" */;
+			buildPhases = (
+				3753D2E01703EDD6008C6901 /* Sources */,
+				3753D2E11703EDD6008C6901 /* Frameworks */,
+				3753D2E21703EDD6008C6901 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = glutOnMac;
+			productName = glutOnMac;
+			productReference = 3753D2E41703EDD6008C6901 /* glutOnMac */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		3753D2DC1703EDD6008C6901 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0460;
+				ORGANIZATIONNAME = "William Yang";
+			};
+			buildConfigurationList = 3753D2DF1703EDD6008C6901 /* Build configuration list for PBXProject "glutOnMac" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 3753D2DB1703EDD5008C6901;
+			productRefGroup = 3753D2E51703EDD6008C6901 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				3753D2E31703EDD6008C6901 /* glutOnMac */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		3753D2E01703EDD6008C6901 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3753D2E81703EDD6008C6901 /* main.cpp in Sources */,
+				3753D2F61703F5BD008C6901 /* render.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		3753D2EB1703EDD6008C6901 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		3753D2EC1703EDD6008C6901 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		3753D2EE1703EDD6008C6901 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		3753D2EF1703EDD6008C6901 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		3753D2DF1703EDD6008C6901 /* Build configuration list for PBXProject "glutOnMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3753D2EB1703EDD6008C6901 /* Debug */,
+				3753D2EC1703EDD6008C6901 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3753D2ED1703EDD6008C6901 /* Build configuration list for PBXNativeTarget "glutOnMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3753D2EE1703EDD6008C6901 /* Debug */,
+				3753D2EF1703EDD6008C6901 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 3753D2DC1703EDD6008C6901 /* Project object */;
+}
