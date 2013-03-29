@@ -1,4 +1,6 @@
 #include <cstdio>
+#include <cmath>
+#include <cstdlib>
 #include <GLUT/glut.h>
 
 const static int initPosX = 250, // initial window position relative to 
@@ -9,13 +11,22 @@ const static int initWidth = 500,   // initial window size,
                  initHeight = 500;  // in pixels.
 
 
-const static GLfloat ambientLight[] = { 0.0, 0.0, 0.0, 1.0 };
-const static GLfloat diffuseLight[] = { 1.0, 0.5, 0.5, 1.0 };
-const static GLfloat lightPosition[] = { 2.0, 2.0, 2.0, 0};
+const static GLfloat ambientLight0[] = { 1.0, 0.85, 0.35, 1.0 };
+const static GLfloat diffuseLight0[] = { 1.0, 0.5, 0.5, 1.0 };
+const static GLfloat lightPosition0[] = { 2.0, 2.0, 2.0, 0};
+
+const static GLfloat ambientLight1[] = { 0.0, 0.0, 0.0, 1.0 };
+const static GLfloat diffuseLight1[] = { 0.0, 0.3, 0.15, 1.0 };
+const static GLfloat lightPosition1[] = { -5.0, -5.0, 5.0, 0};
 
 GLfloat xangle = 0.0, yangle = 0.0, zangle = 0.0;
 GLfloat xt = 0.0, yt = 0.0, zt = 0.0;
 
+/*
+const static GLint num_buffers = 2;
+const static GLint vertex_buf = 0;
+const static GLint index_buf = 0;
+static GLuint buffers[num_buffers];
 
 const static GLint l = 1;
 
@@ -41,7 +52,6 @@ const static GLubyte faceIndices[6][4] = {
 
 const static GLsizei vertexCnt[] = { 4, 4, 4, 4, 4, 4 };
 
-/*
 const static GLfloat colors[] = {
     1.0, 0.8, 0.3,
     1.0, 0.8, 0.3,
@@ -53,10 +63,48 @@ const static GLfloat colors[] = {
     1.0, 0.8, 0.3
 };
 */
+
+const static GLfloat X = 0.525731112119133606, Z = 0.850650808352039932;
+const static GLfloat vertices[12][3] = {
+    { -X, 0.0, Z }, { X, 0.0, Z }, { -X, 0.0, -Z }, { X, 0.0, -Z },
+    { 0.0, Z, X }, { 0.0, Z, -X }, { 0.0, -Z, X }, { 0.0, -Z, -X },
+    { Z, X, 0.0 }, { -Z, X, 0.0 }, { Z, -X, 0.0 }, { -Z, -X, 0.0 },
+};
+const static GLuint indices[20][3] = {
+    {1, 4, 0}, {4, 9 ,0}, {4, 5, 9}, {8, 5, 4}, {1, 8, 4},
+    {1, 10, 8}, {10, 3, 8}, {8, 3, 5}, {3, 2, 5}, {3, 7, 2},
+    {3, 10, 7}, {10, 6, 7}, {6, 11, 7}, {6, 0, 11}, {6, 1, 0},
+    {10, 1, 6}, {11, 0, 9}, {2, 11, 9}, {5, 2, 9}, {11, 2, 7}
+};
+
+static GLfloat* getNormal3pv(const GLfloat *p1, const GLfloat *p2, const GLfloat *p3){
+    static GLfloat norm[3], v1[3], v2[3], d;
+    for (int i = 0; i < 3; ++i){
+        v1[i] = p2[i] - p1[i];
+        v2[i] = p3[i] - p2[i];
+    }
+    norm[0] = v1[1] * v2[2] - v1[2] * v2[1];
+    norm[1] = v1[2] * v2[0] - v1[0] * v2[2];
+    norm[2] = v1[0] * v2[1] - v1[1] * v2[0];
+    d = sqrt(norm[0] * norm[0] + norm[1] * norm[1] + norm[2] * norm[2]);
+    if (d == 0.0){
+        printf("invalid normal vector!\n");
+        exit(1);
+    }
+    for (int i = 0; i < 3; ++i)
+        norm[i] /= d;
+    return norm;
+}
+
 static void drawSomething(){
     //glMultiDrawElements(GL_QUADS, vertexCnt, GL_UNSIGNED_BYTE, (GLvoid **)faceIndices, 6);
-    for (int i = 0; i < 6; ++i)
-        glDrawElements(GL_QUADS, 4, GL_UNSIGNED_BYTE, faceIndices[i]);
+    // bloody hell, multidraw causes seg fault!
+     for (int i = 0; i < 20; ++i){
+        glNormal3fv(getNormal3pv(vertices[indices[i][0]], 
+            vertices[indices[i][1]], vertices[indices[i][2]]));
+        glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, indices[i]);
+     }
+    //glDrawElements(GL_QUADS, 4*6, GL_UNSIGNED_BYTE, (GLubyte*)NULL);
 }
 
 
@@ -73,14 +121,31 @@ static void initGLUT(GLfloat width, GLfloat height)
 {    
     glClearColor(0.0, 0.0, 0.0, 0.0);
     glEnableClientState(GL_VERTEX_ARRAY);
-    glVertexPointer(3, GL_INT, 0, vertices);
-    //glEnableClientState(GL_COLOR_ARRAY);
-    //glColorPointer(3, GL_FLOAT, 0, colors);
+    // glEnableClientState(GL_NORMAL_ARRAY);
+    // glVertexPointer(3, GL_INT, 0, vertices);
+    // glEnableClientState(GL_COLOR_ARRAY);
+    // glColorPointer(3, GL_FLOAT, 0, colors);
+    // glGenBuffers(num_buffers, buffers);
+    // glBindBuffer(GL_ARRAY_BUFFER, buffers[vertex_buf]);
+    // glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices,
+    //    GL_STATIC_DRAW);
+    glVertexPointer(3, GL_FLOAT, 0, vertices);
+    // glNormalPointer(GL_FLOAT, 0, vertices);
+
+    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers[index_buf]);
+    // glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(faceIndices), faceIndices,
+    //     GL_STATIC_DRAW);
+
     glShadeModel(GL_SMOOTH);
-    glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight);
-    glLightfv(GL_LIGHT0, GL_POSITION,lightPosition);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight0);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight0);
+    glLightfv(GL_LIGHT0, GL_POSITION,lightPosition0);
     glEnable(GL_LIGHT0);
+    glLightfv(GL_LIGHT1, GL_AMBIENT, ambientLight1);
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, diffuseLight1);
+    glLightfv(GL_LIGHT1, GL_POSITION,lightPosition1);
+    glEnable(GL_LIGHT1);
+
     transformGLUT(width, height);
 }
 
@@ -102,8 +167,8 @@ static void display()
     glRotatef(xangle,1.0,0.0,0.0);
     glRotatef(yangle,0.0,1.0,0.0);
     glRotatef(zangle,0.0,0.0,1.0);
-    //glutSolidIcosahedron();
-    glutSolidTorus(0.4,1.0,20,20);
+    // glutSolidIcosahedron();
+    //glutSolidTorus(0.4,1.0,20,20);
     drawSomething();
     glPopMatrix();
     glFlush();
