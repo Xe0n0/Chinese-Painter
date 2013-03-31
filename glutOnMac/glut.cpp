@@ -11,13 +11,16 @@ const static int initWidth = 500,   // initial window size,
                  initHeight = 500;  // in pixels.
 
 
+/* light 0 */
 const static GLfloat ambientLight0[] = { 1.0, 0.85, 0.35, 1.0 };
 const static GLfloat diffuseLight0[] = { 1.0, 0.5, 0.5, 1.0 };
 const static GLfloat lightPosition0[] = { 2.0, 2.0, 2.0, 0};
 
+/* light 1 */
 const static GLfloat ambientLight1[] = { 0.0, 0.0, 0.0, 1.0 };
 const static GLfloat diffuseLight1[] = { 0.0, 0.3, 0.15, 1.0 };
 const static GLfloat lightPosition1[] = { -5.0, -5.0, 5.0, 0};
+
 
 GLfloat xangle = 0.0, yangle = 0.0, zangle = 0.0;
 GLfloat xt = 0.0, yt = 0.0, zt = 0.0;
@@ -64,6 +67,9 @@ const static GLfloat colors[] = {
 };
 */
 
+static bool divide = false;
+
+/* icosahedron */
 const static GLfloat X = 0.525731112119133606, Z = 0.850650808352039932;
 const static GLfloat vertices[12][3] = {
     { -X, 0.0, Z }, { X, 0.0, Z }, { -X, 0.0, -Z }, { X, 0.0, -Z },
@@ -77,6 +83,17 @@ const static GLuint indices[20][3] = {
     {10, 1, 6}, {11, 0, 9}, {2, 11, 9}, {5, 2, 9}, {11, 2, 7}
 };
 
+static void normalize3fv(GLfloat *v){
+    static GLfloat d = sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+    if (d == 0.0){
+        printf("invalid normal vector!\n");
+        exit(1);
+    }
+    v[0] /= d;
+    v[1] /= d;
+    v[2] /= d;
+}
+
 static GLfloat* getNormal3pv(const GLfloat *p1, const GLfloat *p2, const GLfloat *p3){
     static GLfloat norm[3], v1[3], v2[3], d;
     for (int i = 0; i < 3; ++i){
@@ -86,23 +103,46 @@ static GLfloat* getNormal3pv(const GLfloat *p1, const GLfloat *p2, const GLfloat
     norm[0] = v1[1] * v2[2] - v1[2] * v2[1];
     norm[1] = v1[2] * v2[0] - v1[0] * v2[2];
     norm[2] = v1[0] * v2[1] - v1[1] * v2[0];
-    d = sqrt(norm[0] * norm[0] + norm[1] * norm[1] + norm[2] * norm[2]);
-    if (d == 0.0){
-        printf("invalid normal vector!\n");
-        exit(1);
-    }
-    for (int i = 0; i < 3; ++i)
-        norm[i] /= d;
+    normalize3fv(norm);
     return norm;
+}
+
+static void drawTriangle3pv(const GLfloat *p1, const GLfloat *p2, const GLfloat *p3){
+    glBegin(GL_TRIANGLES);
+    glNormal3fv(getNormal3pv(p1, p2, p3));
+    glVertex3fv(p1);
+    glVertex3fv(p2);
+    glVertex3fv(p3);
+    glEnd();
+}
+
+static void drawDividedTriangles(const GLuint *indices){
+    static GLfloat v01[3], v02[3], v12[3];
+    for (int i = 0; i < 3; i++){
+        v01[i] = (vertices[indices[0]][i] + vertices[indices[1]][i])/2;
+        v02[i] = (vertices[indices[0]][i] + vertices[indices[2]][i])/2;
+        v12[i] = (vertices[indices[1]][i] + vertices[indices[2]][i])/2;
+    }
+    normalize3fv(v01);
+    normalize3fv(v02);
+    normalize3fv(v12);
+    drawTriangle3pv(vertices[indices[0]], v01, v02);
+    drawTriangle3pv(v01, vertices[indices[1]], v12);
+    drawTriangle3pv(v12, vertices[indices[2]], v02);
+    drawTriangle3pv(v01, v12, v02);
 }
 
 static void drawSomething(){
     //glMultiDrawElements(GL_QUADS, vertexCnt, GL_UNSIGNED_BYTE, (GLvoid **)faceIndices, 6);
     // bloody hell, multidraw causes seg fault!
      for (int i = 0; i < 20; ++i){
-        glNormal3fv(getNormal3pv(vertices[indices[i][0]], 
-            vertices[indices[i][1]], vertices[indices[i][2]]));
-        glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, indices[i]);
+        if (divide){
+            drawDividedTriangles(indices[i]);
+        }else{
+            glNormal3fv(getNormal3pv(vertices[indices[i][0]], 
+                vertices[indices[i][1]], vertices[indices[i][2]]));
+            glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, indices[i]);
+        }
      }
     //glDrawElements(GL_QUADS, 4*6, GL_UNSIGNED_BYTE, (GLubyte*)NULL);
 }
@@ -224,6 +264,12 @@ static void keyboard(GLubyte key, GLint x, GLint y)
         break;
     case '6':
         zt -= 0.2;
+        break;
+    case ',':
+        divide = true;
+        break;
+    case '.':
+        divide = false;
         break;
     default: return;
     }
