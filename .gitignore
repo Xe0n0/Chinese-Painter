@@ -18,3 +18,4 @@ DerivedData
 .idea/
 *.o
 glutOnMac/glutApp
+glutOnMac/galaxy.*

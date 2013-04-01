@@ -15,14 +15,24 @@ const static int initWidth = 1000,   // initial window size,
 const static int FPS_SAMPLE_INTERVAL = 1000;
 
 /* light 0 */
-const static GLfloat ambientLight0[] = { 1.0, 0.85, 0.35, 1.0 };
-const static GLfloat diffuseLight0[] = { 1.0, 1.0, 1.0, 1.0 };
-const static GLfloat lightPosition0[] = { 0.0, 0.0, 10.0, 0};
+const static GLfloat ambientLight0[] = { 0.05, 0.0, 0.05, 1.0 };
+const static GLfloat diffuseLight0[] = { 0.5, 0.2, 0.7, 1.0 };
+const static GLfloat specularLight0[] = { 0.1, 0.0, 0.0, 1.0 };
+const static GLfloat lightPosition0[] = { 10.0, 10.0, 10.0, 0};
 
+/* material */
+const static GLfloat ambientMaterial[] = { 0.5, 0.5, 0.5, 1.0 };
+const static GLfloat diffuseMaterial[] = { 0.5, 0.5, 0.3, 1.0 };
+const static GLfloat specularMaterial[] = { 1.0, 1.0, 0.0, 1.0 };
+const static GLfloat noEmission[] = { 0.0, 0.0, 0.0, 1.0};
+const static GLfloat emission[] = { 0.1, 0.1, 0.5, 1.0};
+const static GLfloat shininess = 0.9;
 /* period of revolution and rotation (miliseconds for 360 degrees)*/
 const static GLfloat YEAR_LEN1 = 3000, DAY_LEN1 = 1000,
-                     YEAR_LEN2 = 5000, DAY_LEN2 = 3000,
+                     YEAR_LEN2 = 7000, DAY_LEN2 = 3000,
                      YEAR_LEN3 = 2000;
+
+static bool paused = false;
 
 /* current position of planets and their satelites, in degrees*/
 static GLfloat year1 = 0, day1 = 0, year2 = 20, day2 = 0, year3 = 90;
@@ -34,6 +44,8 @@ static GLfloat frameRate;
 static GLfloat eyeX = 0.0, eyeY = -7.0, eyeZ = 3.0;
 
 static void changeView(){
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
     /*eyes at (eyeX, eyeY, eyeZ) looking at (0, 0, 0), up is (0, 0, 1)*/
     gluLookAt(eyeX, eyeY, eyeZ, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
 }
@@ -44,18 +56,23 @@ static void reshape(int width, int height)
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     gluPerspective(60.0, (GLfloat)width/height, 1.0, 100.0);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
     changeView();
 }
 
 static void initGLUT(GLfloat width, GLfloat height)
 {    
     glClearColor(0.0, 0.0, 0.0, 0.0);
-    glShadeModel(GL_FLAT);
+    glShadeModel(GL_SMOOTH);
+    
     glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight0);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight0);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, specularLight0);
     glLightfv(GL_LIGHT0, GL_POSITION,lightPosition0);
+
+    glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 2.0);
+    glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 1.0);
+    glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.5);
+
     glEnable(GL_LIGHT0);
     glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
@@ -63,14 +80,19 @@ static void initGLUT(GLfloat width, GLfloat height)
     lastTime = lastFPSTime = glutGet(GLUT_ELAPSED_TIME);
 }
 
-
 static void display(){
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glColor3f(1.0, 0.0, 0.0);
+
+    glMaterialfv(GL_FRONT, GL_AMBIENT, ambientMaterial);
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, diffuseMaterial);
+    glMaterialfv(GL_FRONT, GL_SPECULAR, specularMaterial);
+    glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+    glMaterialfv(GL_FRONT, GL_EMISSION, emission);
     
     /* sun */
     glutSolidSphere(0.8, 60, 45);
-
+    glMaterialfv(GL_FRONT, GL_EMISSION, noEmission);
     /* entering a new coordinate system
        planet 1
     */
@@ -108,13 +130,15 @@ static void display(){
         }glPopMatrix();
     }glPopMatrix();
 
+
     glutSwapBuffers();
 }
 
 static void keyboard(GLubyte key, GLint x, GLint y)
 {
     switch (key){
-    /*case '1':
+    /*
+    case '1':
         year1 = (year1 + 5) % 360;
         break;
     case '2':
@@ -128,6 +152,13 @@ static void keyboard(GLubyte key, GLint x, GLint y)
         break;
     case '5':
         year3 = (year3 + 12) % 360;
+        break;
+    */
+    case 'p':
+        paused = true;
+        break;
+    case 'P':
+        paused = false;
         break;
     case 'x':
         eyeX += 0.2;
@@ -145,8 +176,9 @@ static void keyboard(GLubyte key, GLint x, GLint y)
         eyeZ += 0.2;
         break;
     case 'Z':
-        eyeY -= 0.2;
+        eyeZ -= 0.2;
         break;
+    /*
     case 'd':
         glEnable(GL_DEPTH_TEST);
         break;
@@ -158,8 +190,8 @@ static void keyboard(GLubyte key, GLint x, GLint y)
         break;
     case 'L':
         glDisable(GL_LIGHTING);
-        break;
-    default: return;*/
+        break;*/
+    default: return;
     }
     changeView();
     glutPostRedisplay();
@@ -176,6 +208,8 @@ static void idle(){
     }
     GLint diff = currentTime - lastTime;
     lastTime = currentTime;
+    if (paused)
+        return;
     year1 += 360 / YEAR_LEN1 * diff;
     day1 += 360 / DAY_LEN1 * diff;
     year2 += 360 / YEAR_LEN2 * diff;
@@ -195,7 +229,7 @@ int main(int argc, char *argv[])
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);
     glutIdleFunc(idle);
-    //glutKeyboardFunc(keyboard);
+    glutKeyboardFunc(keyboard);
     glutMainLoop();
     return 0;
 }

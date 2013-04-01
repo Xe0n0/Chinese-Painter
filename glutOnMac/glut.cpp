@@ -186,6 +186,13 @@ static void initGLUT(GLfloat width, GLfloat height)
     glLightfv(GL_LIGHT1, GL_POSITION,lightPosition1);
     glEnable(GL_LIGHT1);
 
+
+    glEnable(GL_LINE_SMOOTH);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+
+
     transformGLUT(width, height);
 }
 
