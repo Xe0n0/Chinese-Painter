@@ -19,3 +19,4 @@ DerivedData
 *.o
 glutOnMac/glutApp
 glutOnMac/galaxy.*
+a.out

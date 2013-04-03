@@ -1,0 +1,5 @@
+plans:
+
+a) random landscape generation
+b) offscreen rendering. (set up CGL context, generate framebuffer and renderbuffer, 
+    convert bitmap to png with libpng then to video using ffmpeg)

@@ -1,19 +1,36 @@
 #include <cstdio>
 #include <cmath>
-#include <cstdlib>
 #include <png.h>
+#include <cstdlib>
+#include <sys/time.h>
+//Windows:#include <GL/glut.h>
 #include <GLUT/glut.h>
+#include <OpenGL/OpenGL.h>
 
 const static int initPosX = 0, // initial window position relative to 
                  initPosY = 0; // upper-left corner of the screen, 
                                  // in pixels.
-const static int initWidth = 100,   // initial window size,
-                 initHeight = 100;  // in pixels.
+const static int initWidth = 1024,   // initial window size,
+                 initHeight = 768;  // in pixels.
 
 /* how many mili-seconds to wait for a FPS calculation 
    smaller is more frequent.
 */
 const static int FPS_SAMPLE_INTERVAL = 1000;
+
+/* fixed FPS for video output */
+const static GLfloat FIXED_FPS = 24.0;
+
+const static CGLPixelFormatAttribute pixelattrib[15] = {
+    kCGLPFAOpenGLProfile, (CGLPixelFormatAttribute)kCGLOGLPVersion_3_2_Core,
+    kCGLPFAColorSize,     (CGLPixelFormatAttribute)24,
+    kCGLPFAAlphaSize,     (CGLPixelFormatAttribute)8,
+    kCGLPFAAccelerated,
+    kCGLPFAMultisample,
+    kCGLPFASampleBuffers, (CGLPixelFormatAttribute)1,
+    kCGLPFASamples,       (CGLPixelFormatAttribute)4,
+    (CGLPixelFormatAttribute)0
+};
 
 /* light 0 */
 const static GLfloat ambientLight0[] = { 0.1, 0.0, 0.1, 1.0 };
@@ -34,10 +51,11 @@ const static GLfloat specularMaterial[] = { 1.0, 1.0, 1.0, 1.0 };
 const static GLfloat noEmission[] = { 0.0, 0.0, 0.0, 1.0};
 const static GLfloat emission[] = { 0.3, 0.1, 0.1, 1.0};
 const static GLfloat shininess = 0.7;
-/* period of revolution and rotation (miliseconds for 360 degrees)*/
-const static GLfloat YEAR_LEN1 = 3000, DAY_LEN1 = 1000,
-                     YEAR_LEN2 = 7000, DAY_LEN2 = 3000,
-                     YEAR_LEN3 = 2000;
+
+/* period of revolution and rotation (seconds for 360 degrees)*/
+const static GLfloat YEAR_LEN1 = 3, DAY_LEN1 = 1,
+                     YEAR_LEN2 = 7, DAY_LEN2 = 3,
+                     YEAR_LEN3 = 2;
 
 static bool paused = false;
 
@@ -50,30 +68,49 @@ static GLfloat frameRate;
 
 static GLfloat eyeX = 0.0, eyeY = -7.0, eyeZ = 3.0;
 
+static GLuint framebuffer, renderbuffer;
+
+static CGLPixelFormatObj pixelformat;
+static CGLContextObj context;
+
 static png_byte * row_pointers[initHeight];
 static png_byte bitmap[initWidth * initWidth * 4];
 
-static void changeView(){
+static unsigned int getMilisec(){
+// UNIX
+    timeval t;
+    gettimeofday(&t, NULL);
+    return (int)t.tv_sec * 1000 + (int)t.tv_usec / 1000;
+// Windows
+// not implemented
+}
+
+static void setView(GLsizei width, GLsizei height){
+    glViewport(0, 0, width, height);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(60.0, (GLfloat)width/height, 1.0, 100.0);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     /*eyes at (eyeX, eyeY, eyeZ) looking at (0, 0, 0), up is (0, 0, 1)*/
     gluLookAt(eyeX, eyeY, eyeZ, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
 }
 
-static void reshape(int width, int height)
-{
-    glViewport(0, 0, width, height);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(60.0, (GLfloat)width/height, 1.0, 100.0);
-    changeView();
+
+static void initFBO(GLfloat width, GLfloat height){
+    glGenFramebuffers(1, &framebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    glGenRenderbuffers(1, &renderbuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, width, height);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, renderbuffer);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) !=  GL_FRAMEBUFFER_COMPLETE){
+        printf("OK, we're in trouble\n");
+        //exit(0);
+    }
 }
 
-static void initGLUT(GLfloat width, GLfloat height)
-{    
-    glClearColor(0.0, 0.0, 0.0, 0.0);
-    glShadeModel(GL_SMOOTH);
-    
+static void initLight(){
     glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight0);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight0);
     glLightfv(GL_LIGHT0, GL_SPECULAR, specularLight0);
@@ -92,26 +129,69 @@ static void initGLUT(GLfloat width, GLfloat height)
     glEnable(GL_LIGHT1);
     glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
-    reshape(width, height);
-    lastTime = lastFPSTime = glutGet(GLUT_ELAPSED_TIME);
-}
-
-static void display(){
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glColor3f(1.0, 0.0, 0.0);
 
     glMaterialfv(GL_FRONT, GL_AMBIENT, ambientMaterial);
     glMaterialfv(GL_FRONT, GL_DIFFUSE, diffuseMaterial);
     glMaterialfv(GL_FRONT, GL_SPECULAR, specularMaterial);
     glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+}
+
+static void initGL(GLfloat width, GLfloat height)
+{
+    GLint npix;
+    CGLError error = CGLChoosePixelFormat(pixelattrib, &pixelformat, &npix);
+    if (error != kCGLNoError){
+        printf("CGLError: %s\n", CGLErrorString(error));
+        exit(0);
+    }
+    error = CGLCreateContext(pixelformat, NULL, &context);
+    if (error != kCGLNoError){
+        printf("CGLError: %s\n", CGLErrorString(error));
+        exit(0);
+    }
+    error = CGLSetCurrentContext(context);
+    if (error != kCGLNoError){
+        printf("CGLError: %s\n", CGLErrorString(error));
+        exit(0);
+    }
+    // CGLLockContext(context);
+
+    initFBO(width, height);
+
+    glClearColor(0.0, 0.0, 0.0, 0.0);
+    glShadeModel(GL_SMOOTH);
+    
+    initLight();
+
+    setView(width, height);
+
+    lastFPSTime = getMilisec();
+    printf("finished initialisation.\n");
+}
+
+static void cleanup(){
+    glDeleteFramebuffers(1, &framebuffer);
+    glDeleteRenderbuffers(1, &renderbuffer);
+    CGLSetCurrentContext(NULL);
+    CGLDestroyPixelFormat(pixelformat);
+    CGLDestroyContext(context);
+}
+
+static void display(){
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    glColor3f(1.0, 0.0, 0.0);
+
     glMaterialfv(GL_FRONT, GL_EMISSION, emission);
     
     /* sun */
     glutSolidSphere(0.8, 60, 45);
-    glMaterialfv(GL_FRONT, GL_EMISSION, noEmission);
+
     /* entering a new coordinate system
        planet 1
     */
+    glMaterialfv(GL_FRONT, GL_EMISSION, noEmission);
     glPushMatrix();{
         /* revolution 公转 */
         glRotatef(year1, 0.0, 0.0, 1.0);
@@ -146,72 +226,34 @@ static void display(){
         }glPopMatrix();
     }glPopMatrix();
 
-
-    glutSwapBuffers();
+    /* wait until finish */
+    glFinish();
 }
 
-static void keyboard(GLubyte key, GLint x, GLint y)
-{
-    switch (key){
-    /*
-    case '1':
-        year1 = (year1 + 5) % 360;
-        break;
-    case '2':
-        year2 = (year2 + 10) % 360;
-        break;
-    case '3':
-        day1 = (day1 + 10) % 360;
-        break;
-    case '4':
-        day2 = (day2 + 15) % 360;
-        break;
-    case '5':
-        year3 = (year3 + 12) % 360;
-        break;
-    */
-    case 'p':
-        paused = true;
-        break;
-    case 'P':
-        paused = false;
-        break;
-    case 'x':
-        eyeX += 0.2;
-        break;
-    case 'X':
-        eyeX -= 0.2;
-        break;
-    case 'y':
-        eyeY += 0.2;
-        break;
-    case 'Y':
-        eyeY -= 0.2;
-        break;
-    case 'z':
-        eyeZ += 0.2;
-        break;
-    case 'Z':
-        eyeZ -= 0.2;
-        break;
-    /*
-    case 'd':
-        glEnable(GL_DEPTH_TEST);
-        break;
-    case 'D':
-        glDisable(GL_DEPTH_TEST);
-        break;
-    case 'l':
-        glEnable(GL_LIGHTING);
-        break;
-    case 'L':
-        glDisable(GL_LIGHTING);
-        break;*/
-    default: return;
+
+static void oneFrame(){
+    display();
+    frameCnt ++;
+    currentTime = getMilisec();
+    if (currentTime - lastFPSTime >= FPS_SAMPLE_INTERVAL){
+        frameRate = (GLfloat) frameCnt / (currentTime - lastFPSTime) * 1000.0;
+        printf("rendering FPS: %.2f\n", frameRate);
+        frameCnt = 0;
+        lastFPSTime = currentTime;
     }
-    changeView();
-    glutPostRedisplay();
+    /*
+    GLint diff = currentTime - lastTime;
+    lastTime = currentTime;
+    if (paused)
+        return;
+    */
+    year1 += 360.0 / YEAR_LEN1 / FIXED_FPS;
+    day1 += 360.0 / DAY_LEN1 / FIXED_FPS;
+    year2 += 360.0 / YEAR_LEN2 / FIXED_FPS;
+    day2 += 360.0 / DAY_LEN2 / FIXED_FPS;
+    year3 += 360.0 / YEAR_LEN3 / FIXED_FPS;
 }
+
 
 static void writePNG(int id){
     glReadPixels(0, 0, initWidth, initHeight, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, bitmap);
@@ -231,44 +273,32 @@ static void writePNG(int id){
     fclose(fp);
 }
 
-static void idle(){
-    writePNG(frameCnt%24);
-    frameCnt ++;
-    currentTime = glutGet(GLUT_ELAPSED_TIME);
-    if (currentTime - lastFPSTime >= FPS_SAMPLE_INTERVAL){
-        frameRate = (GLfloat) frameCnt / (currentTime - lastFPSTime) * 1000.0;
-        printf("FPS: %.2f\n", frameRate);
-        frameCnt = 0;
-        lastFPSTime = currentTime;
-    }
-    GLint diff = currentTime - lastTime;
-    lastTime = currentTime;
-    if (paused)
-        return;
-    year1 += 360 / YEAR_LEN1 * diff;
-    day1 += 360 / DAY_LEN1 * diff;
-    year2 += 360 / YEAR_LEN2 * diff;
-    day2 += 360 / DAY_LEN2 * diff;
-    year3 += 360 / YEAR_LEN3 * diff;
-    glutPostRedisplay();
-}
-
 int main(int argc, char *argv[])
 {
-    glutInit(&argc, argv);
+    /*glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
     glutInitWindowSize(initWidth, initHeight);
     glutInitWindowPosition(initPosX, initPosY);
-    glutCreateWindow(argv[0]);
-    initGLUT(initWidth, initHeight);
-    glutDisplayFunc(display);
-    glutReshapeFunc(reshape);
-    glutIdleFunc(idle);
-    glutKeyboardFunc(keyboard);
+    glutCreateWindow(argv[0]);*/
+
+    if (argc != 2){
+        printf("Usage: %s seconds_of_video_to_render\n", argv[0]);
+        exit(0);
+    }
+
+    float secs = atof(argv[1]);
+    int framesToRender = ceil(secs * FIXED_FPS);
+    
+    printf("starting! %d frames to render!\n", framesToRender);
+    initGL(initWidth, initHeight);
 
     for (int i = 0; i < initHeight; i++)
         row_pointers[i] = bitmap + initWidth * i;
 
-    glutMainLoop();
+    for (int i = 0; i < framesToRender; i++){
+        oneFrame();
+        writePNG(i);
+    }
+    cleanup();
     return 0;
 }
