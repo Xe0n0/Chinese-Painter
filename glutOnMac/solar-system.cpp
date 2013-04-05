@@ -1,14 +1,15 @@
 #include <cstdio>
 #include <cmath>
 #include <cstdlib>
+#include <cstring>
 #include <png.h>
 #include <GLUT/glut.h>
 
 const static int initPosX = 0, // initial window position relative to 
                  initPosY = 0; // upper-left corner of the screen, 
                                  // in pixels.
-const static int initWidth = 100,   // initial window size,
-                 initHeight = 100;  // in pixels.
+const static int initWidth = 1024,   // initial window size,
+                 initHeight = 768;  // in pixels.
 
 /* how many mili-seconds to wait for a FPS calculation 
    smaller is more frequent.
@@ -39,19 +40,30 @@ const static GLfloat YEAR_LEN1 = 3000, DAY_LEN1 = 1000,
                      YEAR_LEN2 = 7000, DAY_LEN2 = 3000,
                      YEAR_LEN3 = 2000;
 
+const static unsigned char BMP_HEADER[54] = {0x42, 0x4d, 0x6, 0x6d,
+    0x25, 0x0, 0x0, 0x0, 0x0, 0x0, 0x36, 0x0, 0x0, 0x0, 0x28, 0x0,
+    0x0, 0x0, 0xbd, 0x3, 0x0, 0x0, 0x56, 0x3, 0x0, 0x0, 0x1, 0x0,
+    0x18, 0x0, 0x0, 0x0, 0x0, 0x0, 0xd0, 0x6c, 0x25, 0x0, 0xc2,
+    0x1e, 0x0, 0x0, 0xc2, 0x1e, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    0x0, 0x0, 0x0, 0x0};
+
+static png_image png;
+
 static bool paused = false;
 
 /* current position of planets and their satelites, in degrees*/
 static GLfloat year1 = 0, day1 = 0, year2 = 20, day2 = 0, year3 = 90;
 
 static GLint frameCnt = 0;
+static unsigned int filenameCnt = 0;
 static GLint lastFPSTime = 0, lastTime = 0, currentTime = 0;
 static GLfloat frameRate;
 
 static GLfloat eyeX = 0.0, eyeY = -7.0, eyeZ = 3.0;
 
 static png_byte * row_pointers[initHeight];
-static png_byte bitmap[initWidth * initWidth * 4];
+static png_byte bitmap[initWidth * initWidth * 3], 
+       convertedBitmap[initWidth * initHeight * 3];
 
 static void changeView(){
     glMatrixMode(GL_MODELVIEW);
@@ -213,17 +225,42 @@ static void keyboard(GLubyte key, GLint x, GLint y)
     glutPostRedisplay();
 }
 
+static void writeBMP(int id){
+    glPixelStorei(GL_UNPACK_ALIGNMENT, sizeof(int));
+    glReadPixels(0, 0, initWidth, initHeight, GL_BGR, GL_UNSIGNED_BYTE, bitmap);
+    static char filename[32];
+    sprintf(filename, "output/%06d.bmp", id);
+    FILE *fp = fopen(filename, "wb");
+    fwrite(BMP_HEADER, sizeof(BMP_HEADER), 1, fp);
+    fseek(fp, 0x0012, SEEK_SET);
+    fwrite(&initWidth, sizeof(int), 1, fp);
+    fwrite(&initHeight, sizeof(int), 1, fp);
+    fseek(fp, 0, SEEK_END);
+    fwrite(bitmap, sizeof(bitmap), 1, fp);
+    fclose(fp);
+} 
+
+static void initPNG(){
+    for (int i = 0; i < initHeight; i++)
+        row_pointers[initHeight - i - 1] = bitmap + initWidth * i * 3;
+    // memset(&png, 0, sizeof(png));
+    // png.version = PNG_IMAGE_VERSION;
+    // png.width = initWidth;
+    // png.height = initHeight;
+    // png.format = PNG_FORMAT_RGB;
+}
+
 static void writePNG(int id){
-    glReadPixels(0, 0, initWidth, initHeight, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, bitmap);
+    glReadPixels(0, 0, initWidth, initHeight, GL_RGB, GL_UNSIGNED_BYTE, bitmap);
     png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
         NULL, NULL, NULL);
     png_infop info_ptr = png_create_info_struct (png_ptr);
-
     png_set_IHDR (png_ptr, info_ptr, initWidth, initHeight, 8,
-                  PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
+                  PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE,
                   PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
     static char filename[32];
     sprintf(filename, "output/%06d.png", id);
+    // png_image_write_to_file(&png, filename, 0, bitmap, 3 * initWidth, NULL);
     FILE *fp = fopen(filename, "wb");
     png_init_io (png_ptr, fp);
     png_set_rows (png_ptr, info_ptr, row_pointers);
@@ -232,8 +269,9 @@ static void writePNG(int id){
 }
 
 static void idle(){
-    writePNG(frameCnt%24);
+    writePNG(filenameCnt);
     frameCnt ++;
+    filenameCnt ++;
     currentTime = glutGet(GLUT_ELAPSED_TIME);
     if (currentTime - lastFPSTime >= FPS_SAMPLE_INTERVAL){
         frameRate = (GLfloat) frameCnt / (currentTime - lastFPSTime) * 1000.0;
@@ -265,10 +303,7 @@ int main(int argc, char *argv[])
     glutReshapeFunc(reshape);
     glutIdleFunc(idle);
     glutKeyboardFunc(keyboard);
-
-    for (int i = 0; i < initHeight; i++)
-        row_pointers[i] = bitmap + initWidth * i;
-
+    initPNG();
     glutMainLoop();
     return 0;
 }
