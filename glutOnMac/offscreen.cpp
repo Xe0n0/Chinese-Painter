@@ -192,7 +192,7 @@ static void initGL(GLfloat width, GLfloat height)
         printf("OpenGL Error after initFBO: 0x%x\n", glerr);
         exit(0);
     }
-    //glClearColor(1.0, 0.0, 0.0, 0.0);
+    glClearColor(1.0, 0.0, 0.0, 0.0);
     //glShadeModel(GL_SMOOTH);
     //initLight();
     glerr = glGetError();
@@ -272,8 +272,37 @@ static void display(){
 }
 
 
+static void sample_display(){
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    GLenum glerr = glGetError();
+    if (glerr != GL_NO_ERROR){
+        printf("OpenGL Error after glClear: 0x%x\n", glerr);
+        exit(0);
+    }
+    glEnd();
+    glerr = glGetError();
+    if (glerr != GL_NO_ERROR){
+        printf("OpenGL Error before glBegin: 0x%x\n", glerr);
+        exit(0);
+    }
+    glBegin(GL_TRIANGLES);
+    glerr = glGetError();
+    if (glerr != GL_NO_ERROR){
+        printf("OpenGL Error after glBegin: 0x%x\n", glerr);
+        exit(0);
+    }
+    //
+    glEnd();
+    glerr = glGetError();
+    if (glerr != GL_NO_ERROR){
+        printf("OpenGL Error after glEnd: 0x%x\n", glerr);
+        exit(0);
+    }
+}
+
 static void oneFrame(){
-    display();
+    //display();
+    sample_display();
     frameCnt ++;
     currentTime = getMilisec();
     if (currentTime - lastFPSTime >= FPS_SAMPLE_INTERVAL){

@@ -304,6 +304,7 @@ int main(int argc, char *argv[])
     glutIdleFunc(idle);
     glutKeyboardFunc(keyboard);
     initPNG();
+    glutHideWindow();
     glutMainLoop();
     return 0;
 }
