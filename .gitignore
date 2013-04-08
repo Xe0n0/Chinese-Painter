@@ -1,4 +1,6 @@
 # Xcode
+glutOnMac/output
+glutOnMac/output
 .DS_Store
 build/
 *.pbxuser

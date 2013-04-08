@@ -52,6 +52,8 @@ const static GLfloat noEmission[] = { 0.0, 0.0, 0.0, 1.0};
 const static GLfloat emission[] = { 0.3, 0.1, 0.1, 1.0};
 const static GLfloat shininess = 0.7;
 
+const static GLenum drawbufs[1] = {GL_COLOR_ATTACHMENT0};
+
 /* period of revolution and rotation (seconds for 360 degrees)*/
 const static GLfloat YEAR_LEN1 = 3, DAY_LEN1 = 1,
                      YEAR_LEN2 = 7, DAY_LEN2 = 3,
@@ -68,13 +70,13 @@ static GLfloat frameRate;
 
 static GLfloat eyeX = 0.0, eyeY = -7.0, eyeZ = 3.0;
 
-static GLuint framebuffer, renderbuffer;
+static GLuint framebuffer, colorbuffer, depthbuffer;
 
 static CGLPixelFormatObj pixelformat;
 static CGLContextObj context;
 
 static png_byte * row_pointers[initHeight];
-static png_byte bitmap[initWidth * initWidth * 4];
+static png_byte bitmap[initWidth * initWidth * 3];
 
 static unsigned int getMilisec(){
 // UNIX
@@ -98,15 +100,25 @@ static void setView(GLsizei width, GLsizei height){
 
 
 static void initFBO(GLfloat width, GLfloat height){
+    // frame buffer
     glGenFramebuffers(1, &framebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-    glGenRenderbuffers(1, &renderbuffer);
-    glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);
+    // color buffer
+    glGenRenderbuffers(1, &colorbuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, colorbuffer);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, width, height);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, renderbuffer);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, colorbuffer);
+    // depth buffer
+    glGenRenderbuffers(1, &depthbuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, depthbuffer);
+    glRenderbufferStorage(GL_RENDERBUFFER,  GL_DEPTH_COMPONENT, width, height);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthbuffer);
+
+    //
+    glDrawBuffers(1, drawbufs);
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) !=  GL_FRAMEBUFFER_COMPLETE){
         printf("OK, we're in trouble\n");
-        //exit(0);
+        exit(0);
     }
 }
 
@@ -124,11 +136,29 @@ static void initLight(){
     glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 2.0);
     glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 1.0);
     glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.5);
-
+    
+    GLenum glerr = glGetError();
+    if (glerr != GL_NO_ERROR){
+        printf("OpenGL Error after setting lights: 0x%x\n", glerr);
+        exit(0);
+    }
     glEnable(GL_LIGHT0);
     glEnable(GL_LIGHT1);
     glEnable(GL_LIGHTING);
+
+    glerr = glGetError();
+    if (glerr != GL_NO_ERROR){
+        printf("OpenGL Error after enable lighting: 0x%x\n", glerr);
+        exit(0);
+    }
+
     glEnable(GL_DEPTH_TEST);
+
+    glerr = glGetError();
+    if (glerr != GL_NO_ERROR){
+        printf("OpenGL Error after enable depth test: 0x%x\n", glerr);
+        exit(0);
+    }
 
     glMaterialfv(GL_FRONT, GL_AMBIENT, ambientMaterial);
     glMaterialfv(GL_FRONT, GL_DIFFUSE, diffuseMaterial);
@@ -156,23 +186,34 @@ static void initGL(GLfloat width, GLfloat height)
         exit(0);
     }
     // CGLLockContext(context);
-
     initFBO(width, height);
-
-    glClearColor(0.0, 0.0, 0.0, 0.0);
-    glShadeModel(GL_SMOOTH);
-    
-    initLight();
-
-    setView(width, height);
-
+    GLenum glerr = glGetError();
+    if (glerr != GL_NO_ERROR){
+        printf("OpenGL Error after initFBO: 0x%x\n", glerr);
+        exit(0);
+    }
+    //glClearColor(1.0, 0.0, 0.0, 0.0);
+    //glShadeModel(GL_SMOOTH);
+    //initLight();
+    glerr = glGetError();
+    if (glerr != GL_NO_ERROR){
+        printf("OpenGL Error after initLight: 0x%x\n", glerr);
+        exit(0);
+    }
+    //setView(width, height);
+    glerr = glGetError();
+    if (glerr != GL_NO_ERROR){
+        printf("OpenGL Error after setView: 0x%x\n", glerr);
+        exit(0);
+    }
     lastFPSTime = getMilisec();
     printf("finished initialisation.\n");
 }
 
 static void cleanup(){
     glDeleteFramebuffers(1, &framebuffer);
-    glDeleteRenderbuffers(1, &renderbuffer);
+    glDeleteRenderbuffers(1, &colorbuffer);
+    glDeleteRenderbuffers(1, &depthbuffer);
     CGLSetCurrentContext(NULL);
     CGLDestroyPixelFormat(pixelformat);
     CGLDestroyContext(context);
@@ -256,13 +297,13 @@ static void oneFrame(){
 
 
 static void writePNG(int id){
-    glReadPixels(0, 0, initWidth, initHeight, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, bitmap);
+    glReadPixels(0, 0, initWidth, initHeight, GL_RGB, GL_UNSIGNED_BYTE, bitmap);
     png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
         NULL, NULL, NULL);
     png_infop info_ptr = png_create_info_struct (png_ptr);
 
     png_set_IHDR (png_ptr, info_ptr, initWidth, initHeight, 8,
-                  PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
+                  PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE,
                   PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
     static char filename[32];
     sprintf(filename, "output/%06d.png", id);
@@ -293,7 +334,7 @@ int main(int argc, char *argv[])
     initGL(initWidth, initHeight);
 
     for (int i = 0; i < initHeight; i++)
-        row_pointers[i] = bitmap + initWidth * i;
+        row_pointers[initHeight - i - 1] = bitmap + initWidth * i * 3;
 
     for (int i = 0; i < framesToRender; i++){
         oneFrame();
