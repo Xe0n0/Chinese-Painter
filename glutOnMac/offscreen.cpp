@@ -192,7 +192,7 @@ static void initGL(GLfloat width, GLfloat height)
         printf("OpenGL Error after initFBO: 0x%x\n", glerr);
         exit(0);
     }
-    glClearColor(1.0, 0.0, 0.0, 0.0);
+    glClearColor(1.0, 1.0, 0.0, 0.0);
     //glShadeModel(GL_SMOOTH);
     //initLight();
     glerr = glGetError();
@@ -301,8 +301,8 @@ static void sample_display(){
 }
 
 static void oneFrame(){
-    //display();
-    sample_display();
+    display();
+    //sample_display();
     frameCnt ++;
     currentTime = getMilisec();
     if (currentTime - lastFPSTime >= FPS_SAMPLE_INTERVAL){

@@ -1,0 +1,13 @@
+#ifndef __%(headerdef)s__
+#define __%(headerdef)s__
+#include <GLUT/glut.h>
+const static GLuint npts = %(npts)d;
+const static GLuint nfaces = %(nfaces)d;
+const static GLfloat vertices[npts][3] = {
+%(coordinates)s
+};
+const static GLuint indices[nfaces][3] = {
+%(indices)s
+};
+#endif
+
