@@ -1,0 +1,173 @@
+
+#include stdafx.h
+#include stdio.h
+#include GLglut.h
+#include glglext.h
+#include stdio.h
+#include iostream
+#includestring
+#includefstream
+#includesstream
+using namespace std;
+
+
+int v_num=34835; 
+int f_num=69666; 
+int vn_num=34835;
+GLfloat point; 
+int fpoint; 
+int fnArr;
+GLfloat vnArr;
+string s1,s2,s3,s4;
+GLfloat f2,f3,f4;
+struct vectors
+{
+	GLfloat x;
+	GLfloat y;
+	GLfloat z;
+};
+int readfile(string addrstr) 
+{
+	int i;
+	point=new GLfloat[v_num];
+	for (i=0;iv_num;i++)
+	{
+		point[i]=new GLfloat[3];
+	}
+	vnArr=new GLfloat[vn_num];
+	for (i=0;ivn_num;i++)
+	{
+		vnArr[i]=new GLfloat[3];
+	}
+	fpoint=new int[f_num];
+	fnArr=new int[f_num];
+	for (i=0;if_num;i++)
+	{
+		fpoint[i]=new int[3];
+		fnArr[i]=new int[3];
+	}
+	ifstream infile(addrstr.c_str());
+	string sline;
+	int ii=0,jj=0,kk=0;
+	
+	while(getline(infile,sline))
+	{
+		
+		if(sline.size()==0)continue;
+		if(sline[0]=='v')
+		{
+			if(sline[1]=='n')
+			{
+				
+				istringstream sin(sline);
+				sins1f2f3f4;
+				vnArr[ii][0]=f2;
+				vnArr[ii][1]=f3;
+				vnArr[ii][2]=f4;
+				ii++;
+				
+			}
+			else
+			{
+				
+				istringstream sin(sline);
+				sins1f2f3f4;
+				point[jj][0]=f2;
+				point[jj][1]=f3;
+				point[jj][2]=f4;
+				jj++;
+				
+			}
+		}
+		if (sline[0]=='f') 
+		{
+			
+			istringstream in(sline);
+			
+			int a;
+			ins1;
+			
+			int i,k;
+			
+			for(i=0;i3;i++)
+			{
+				ins1;
+				
+				a=0;
+				for(k=0;s1[k]!='';k++)
+				{
+					a=a10+(s1[k]-48);
+				}
+				fpoint[kk][i]=a;
+				
+				a=0;
+				for(k=k+2;ks1.size();k++)
+				{
+					a=a10+(s1[k]-48);
+				}
+				fnArr[kk][i]=a;
+			}	
+		kk++;	
+		}	
+	}
+	return 0;
+}
+
+
+
+
+void init(void)
+{
+	readfile(b.obj);
+	glClearColor(1.0,1.0,1.0,0.0);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluOrtho2D(0,200,0,200); 
+	glColor3f(0.0,0.0,0.0);
+}
+
+void display(void)
+{
+    glClear(GL_COLOR_BUFFER_BIT);
+	vectors R,N,E;
+	GLfloat m,u,v;
+	
+    for (int i=0;iv_num;i++)
+	{
+		N.x=vnArr[i][0];
+		N.y=vnArr[i][1];
+		N.z=vnArr[i][2];顶点法向量
+		E.x=point[i][0];
+		E.y=point[i][1];
+		E.z=point[i][2]-30;
+		float alfa=N.xE.x+N.yE.y+N.zE.z;
+		if(alfa20alfa5)continue;
+		R.x=(2alfa-1)E.x;
+		R.y=(2alfa-1)E.y;
+		R.z=(2alfa-1)E.z;
+		m=sqrt(R.xR.x+R.yR.y+(R.z+1)(R.z+1));
+		u=R.x(2m)+0.5;
+		v=R.y(2m)+0.5;
+		glPointSize(3.0f);  
+		glBegin(GL_POINTS);
+		glVertex2d(u200, v200);
+		glEnd();  
+	}
+
+	glFlush();
+	glutSwapBuffers();
+	
+}
+
+int main(int argc, char argv)
+{
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_DOUBLE  GLUT_RGB);
+    glutInitWindowSize(500, 500);
+    glutInitWindowPosition(100, 100);
+    glutCreateWindow(argv[0]);
+    init();
+    glutDisplayFunc(display);
+    glutMainLoop();
+    return 0;
+}
