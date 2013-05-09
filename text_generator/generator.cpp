@@ -11,46 +11,64 @@
 #pragma comment(lib,"cv.lib")
 
 #define margin 20
-#define variance 8.0
-#define range 11
 #define mean 0
 
-double cumulativeNormal(int x) {
-	static bool dispatch = false;
-	static double p[margin] = {};
+static double distribution[20][margin];
 
-	if (!dispatch)
+void initial()
+{
+	// for (int i = 0; i < 20; ++i)
+	// {
+	// 	double *p = *(distribution + i);
+	// 	p = new double[margin];
+	// }
+	for (int i = 0; i < 20; ++i)
 	{
+		double *p = *(distribution + i);
+
 		const int nrolls = 1000000;  // number of experiments
-
 		std::default_random_engine generator;
-		std::normal_distribution<double> distribution(0, variance);
+		std::normal_distribution<double> distribution(0, i);
 
 
-		for (int i = 0; i < nrolls; ++i) {
+		for (int j = 0; j < nrolls; ++j) {
 			double number = distribution(generator);
 			if ((number >= 0.0 ) && (number <= margin)) ++p[int(number)];
 		}
 
-		for (int i = 0; i < margin; ++i) {
-			p[i] /= nrolls;
+		for (int j = 0; j < margin; ++j) {
+			p[j] /= nrolls;
 			// p[i] /= p[0];
 			// p[i] = sqrt(p[i]);
 
-			printf("%f\n", p[i]);
+			// printf("%f\n", p[i]);
 		}
-		dispatch = true;
 	}
-	return p[x % margin];
+	// for (int i = 0; i < 20; ++i)
+	// {
+	// 	double *p = distribution[i];
+
+	// 	for (int j = 0; j < margin; ++j)
+	// 	{
+	// 		printf("%f\n", p[j]);
+	// 	}
+	// }
+	printf("complete distribution generatign\n");
 }
 
+double cumulativeNormal(int x, int variance) {
 
-int main( int argc, char** argv ) 
+	double *p = distribution[variance];
+
+	return p[(x % margin)];
+}
+
+void calc_with_variance(int variance)
 {
 	IplImage* image = cvCreateImage(cvSize(512,64),IPL_DEPTH_8U,3);
 	if(!image) 
 	{
-		return -1;
+		return;
 	}
 	CvScalar start = CV_RGB(25, 25, 25);
 	CvScalar end = CV_RGB(255, 255, 255);
@@ -72,7 +90,7 @@ int main( int argc, char** argv )
 			ptr[2] = cvRound(ptr[2] + weightR*dist); 
 		}
 	}
-
+	printf("main stroke\n");
 	// cvNot(image, image);
 
 	for (int i = 0; i < image->width; ++i)
@@ -80,7 +98,7 @@ int main( int argc, char** argv )
 		uchar* origin = &CV_IMAGE_ELEM(image, uchar, margin, i * 3);
 		for (int j = 0; j < margin; ++j)
 		{
-			double factor = cumulativeNormal(margin - j - 1) / cumulativeNormal(0);
+			double factor = cumulativeNormal(margin - j - 1, variance) / cumulativeNormal(0, variance);
 			printf("%f\n", factor);
 			uchar* ptr = &CV_IMAGE_ELEM(image, uchar, j, i * 3);
 
@@ -96,14 +114,25 @@ int main( int argc, char** argv )
 		}
 	}
 	// cvNot(image, image);
-
-	cvSaveImage( "radial.jpg", image );
+	char filename[100];
+	sprintf(filename, "./ND/texture_%d.jpg", variance);
+	printf("generating %s\n", filename);
+	cvSaveImage(filename, image );
 	cvNamedWindow( "test", 1 );
 	cvShowImage( "test", image );
+	cvReleaseImage(&image); 
+}
+
+int main( int argc, char** argv ) 
+{
+	initial();
+	for (int i = 0; i < 20; ++i)
+	{
+		calc_with_variance(i);
+	}
 	cvWaitKey();
 	cvDestroyWindow("test");
-	cvReleaseImage(&image);
-	return 0; 
+	return 0;
 }
 
 
