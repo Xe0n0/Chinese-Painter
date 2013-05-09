@@ -115,7 +115,7 @@ void calc_with_variance(int variance)
 	}
 	// cvNot(image, image);
 	char filename[100];
-	sprintf(filename, "./ND/texture_%d.jpg", variance);
+	sprintf(filename, "./texture/ND/texture_%d.jpg", variance);
 	printf("generating %s\n", filename);
 	cvSaveImage(filename, image );
 	cvNamedWindow( "test", 1 );
