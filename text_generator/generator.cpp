@@ -63,13 +63,9 @@ double cumulativeNormal(int x, int variance) {
 	return p[(x % margin)];
 }
 
-void calc_with_variance(int variance)
+IplImage* calc_with_variance(int variance)
 {
 	IplImage* image = cvCreateImage(cvSize(512,64),IPL_DEPTH_8U,3);
-	if(!image) 
-	{
-		return;
-	}
 	CvScalar start = CV_RGB(25, 25, 25);
 	CvScalar end = CV_RGB(255, 255, 255);
 	CvScalar bg = CV_RGB(255, 255, 255);
@@ -99,7 +95,7 @@ void calc_with_variance(int variance)
 		for (int j = 0; j < margin; ++j)
 		{
 			double factor = cumulativeNormal(margin - j - 1, variance) / cumulativeNormal(0, variance);
-			printf("%f\n", factor);
+			// printf("%f\n", factor);
 			uchar* ptr = &CV_IMAGE_ELEM(image, uchar, j, i * 3);
 
 			ptr[0] = cvRound(255 - (255 - origin[0]) * factor);
@@ -113,22 +109,32 @@ void calc_with_variance(int variance)
 			ptr[2] = cvRound(255 - (255 - origin[2]) * factor);
 		}
 	}
-	// cvNot(image, image);
-	char filename[100];
-	sprintf(filename, "./texture/ND/texture_%d.jpg", variance);
-	printf("generating %s\n", filename);
-	cvSaveImage(filename, image );
-	cvNamedWindow( "test", 1 );
-	cvShowImage( "test", image );
-	cvReleaseImage(&image); 
+	
+	return image;
 }
 
 int main( int argc, char** argv ) 
 {
 	initial();
-	for (int i = 0; i < 20; ++i)
+	for (int j = 1; j < 20; j += 2)
 	{
-		calc_with_variance(i);
+		for (int i = 5; i < 15; ++i)
+		{
+			IplImage *image = calc_with_variance(i);
+			char filename[100];
+			
+			IplImage* image_out = cvCreateImage(cvSize(512,64),IPL_DEPTH_8U,3);
+
+			cvSmooth(image, image_out, CV_GAUSSIAN, 3, 3, j);
+
+			sprintf(filename, "./texture/ND_GB/texture_b%d_d%d.jpg", j, i);
+			printf("generating %s\n", filename);
+			cvSaveImage(filename, image_out);
+			cvNamedWindow( "test", CV_WINDOW_AUTOSIZE);
+			cvShowImage( "test", image_out);
+
+			cvReleaseImage(&image);
+		}
 	}
 	cvWaitKey();
 	cvDestroyWindow("test");
