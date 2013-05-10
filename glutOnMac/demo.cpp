@@ -5,6 +5,7 @@
 #include <png.h>
 #include <GLUT/glut.h>
 #include <vector>
+#include <set>
 using namespace std;
 
 const static int LINE_BUF_LEN = 1024;
@@ -48,8 +49,8 @@ static unsigned int filenameCnt = 0;
 static GLint lastFPSTime = 0, lastTime = 0, currentTime = 0;
 static GLfloat frameRate;
 
-static GLfloat xangle = 0.0, yangle = 0.0, zangle = 0.0;
-static GLfloat xt = 0.0, yt = 0.0, zt = 0.0;
+static GLfloat xangle = -90.0, yangle = 0.0, zangle = 0.0;
+static GLfloat xt = -2.0, yt = -1.0, zt = 0.0;
 
 static png_byte * row_pointers[initHeight];
 static png_byte bitmap[initWidth * initWidth * 3], 
@@ -61,6 +62,7 @@ typedef struct {
     int faceCnt;
     int arrayLen;
     int *faces;
+    GLfloat avgNormal3f[3];
 }VertexRef;
 
 inline static void normalize3fv(GLfloat *v){
@@ -94,15 +96,21 @@ typedef struct{
     int normalN;
     float scale;
     GLfloat *vertex3fPtr;
-    GLfloat *normalPtr;
+    GLfloat *normal3fPtr;
     GLint *face6iPtr;
     VertexRef *vrefPtr;
+    // grey-scale of vertices
+    GLfloat *vtGreyPtr;
+    GLfloat *avgNormal3fPtr;
 }Model;
 static Model *globalModel;
 
 inline static GLfloat absDotProduct(GLfloat *va, GLfloat *vb){
     return fabs(va[0]*vb[0] + va[1]*vb[1] + va[2]*vb[2]);
 }
+
+set<int> globalProfiles;
+
 static void getVertexOnProfile(vector<int> &profilePts, Model *model, GLfloat* eye3fv){
     static GLfloat sight[3];
     profilePts.clear();
@@ -112,7 +120,7 @@ static void getVertexOnProfile(vector<int> &profilePts, Model *model, GLfloat* e
         sight[1] = model->vertex3fPtr[3*vi+1] - eye3fv[1];
         sight[2] = model->vertex3fPtr[3*vi+2] - eye3fv[2];
         normalize3fv(sight);
-        float dotp = absDotProduct(sight, model->normalPtr+3*vi);
+        float dotp = absDotProduct(sight, model->normal3fPtr+3*vi);
         if (dotp <= PROFILE_DOTP){
             profilePts.push_back(vi);
         }
@@ -120,8 +128,8 @@ static void getVertexOnProfile(vector<int> &profilePts, Model *model, GLfloat* e
 }
 
 static Model *loadOBJModel(const char* filename){
-    static char line_buf[LINE_BUF_LEN];
 
+    static char line_buf[LINE_BUF_LEN];
     const static char FACE_NUM[] = "faces:";
     const static char VERTEX_NUM[] = "vertices:";
     const static char NORMAL_NUM[] = "normals:";
@@ -242,7 +250,7 @@ static void reshape(int width, int height)
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     // 视角, 长宽比, 近点, 远点
-    gluPerspective(60.0, (GLfloat)width/height, 0.1, 20.0);
+    gluPerspective(60.0, (GLfloat)width/height, 0.1, 15.0);
     changeView();
 }
 
@@ -266,29 +274,64 @@ static void initGLUT(Model *model)
     glEnable(GL_LIGHT0);
     glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_LINE_SMOOTH);
     reshape(initWidth, initHeight);
     lastTime = lastFPSTime = glutGet(GLUT_ELAPSED_TIME);
 }
 
 
+static bool testOnProfiles(GLfloat *v){
+    return false;
+}
+
 static void drawSomething(Model *model){
     static GLfloat *vptr = model->vertex3fPtr;
-    static GLfloat *vnptr = model->normalPtr;
+    static GLfloat *vnptr = model->normal3fPtr;
     static GLint *fptr;
     static GLint a, b, c;
+    glColor3f(1.0, 1.0, 1.0);
     for (int i = 0; i < model->faceN; ++i){
         fptr = model->face6iPtr + 6*i;
         glBegin(GL_TRIANGLES);
         {
             glNormal3fv(vnptr+3*fptr[1]);
+            if (testOnProfiles(vnptr+3*fptr[1]))
+                globalProfiles.insert(fptr[0]);
             glVertex3fv(vptr+3*fptr[0]);
+
             glNormal3fv(vnptr+3*fptr[3]);
+            if (testOnProfiles(vnptr+3*fptr[3]))
+                globalProfiles.insert(fptr[2]);
             glVertex3fv(vptr+3*fptr[2]);
+            
             glNormal3fv(vnptr+3*fptr[5]);
+            if (testOnProfiles(vnptr+3*fptr[5]))
+                globalProfiles.insert(fptr[4]);
             glVertex3fv(vptr+3*fptr[4]);
         }
         glEnd();
     }
+}
+
+
+static void drawAxis(){
+    glLineWidth(2);
+    glBegin(GL_LINES);
+    {
+        // z red 
+        glColor3f(1.0, 0.0, 0.0);
+        glVertex3i(0, 0, 0);
+        glVertex3i(0, 0, 1);
+        // y green
+        glColor3f(0.0, 1.0, 0.0);
+        glVertex3i(0, 0, 0);
+        glVertex3i(0, 1, 0);
+        // x blue
+        glColor3f(0.0, 0.0, 1.0);
+        glVertex3i(0, 0, 0);
+        glVertex3i(1, 0, 0);
+    }
+    glEnd();
 }
 
 static void display(){
@@ -304,12 +347,16 @@ static void display(){
 
     glPushMatrix();
     glLoadIdentity();
-    glTranslatef(0.0,0.0,-6.0);
+    glTranslatef(0.0,0.0,-3.0);
     glTranslatef(xt,yt,zt);
     glRotatef(xangle,1.0,0.0,0.0);
     glRotatef(yangle,0.0,1.0,0.0);
     glRotatef(zangle,0.0,0.0,1.0);
+
+    drawAxis();
+
     drawSomething(globalModel);
+
     //glutSolidTorus(0.4,1.0,20,20);
     glPopMatrix();
     glFlush();    
@@ -354,6 +401,12 @@ static void keyboard(GLubyte key, GLint x, GLint y)
         break;
     case '6':
         zt -= 0.2;
+        break;
+    case 'l':
+        glEnable(GL_LIGHTING);
+        break;
+    case 'L':
+        glDisable(GL_LIGHTING);
         break;
     default: return;
     }
@@ -404,6 +457,16 @@ static void idle(){
     lastTime = currentTime;
     glutPostRedisplay();
 }
+
+static void calcAvgVF()
+{
+    float avg = 0;
+    for (int i = 0; i < globalModel->vertexN; i++){
+        avg += globalModel->vrefPtr[i].faceCnt;
+    }
+    fprintf(stderr, "avg v/f:%f\n", avg/globalModel->vertexN);
+}
+
 
 int main(int argc, char *argv[])
 {

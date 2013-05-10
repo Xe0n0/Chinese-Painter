@@ -24,60 +24,52 @@ def usage():
 #     if j >= n: j = n-1
 #     return pts[i][j]
 
-def diamond_square(pts, disp, i0, j0, i2, j2):
-    i1 = (i0 + i2) / 2;
-    j1 = (j0 + j2) / 2;
-    diff = i2 - i1;
-    
-    if j0 - diff >= 0:
-        pts[i1][j0] = (pts[i0][j0] + pts[i2][j0]
-            + pts[i1][j1] + pts[i1][j0-diff]) / 4
-    else:
-        pts[i1][j0] = (pts[i0][j0] + pts[i2][j0] + pts[i1][j1]) / 3
-    pts[i1][j0] = pts[i1][j0] + random.uniform(-disp, disp);
+#def diamond_square(pts, disp, i0, j0, i2, j2):
+def diamond_square(pts, disp, diff):
+    i = 0
+    while i < size:
+        j = 0
+        while j < size:
+            pts[i][j] = random.uniform(-disp, disp) + pts[i-diff][j-diff]
+            + pts[i-diff][j+diff] + pts[i+diff][j-diff] + pts[i+diff][j+diff] 
+            j = j + 2*diff
+        i = i + 2*diff
+    i = 0
+    while i < size:
+        j = 0
+        while j < size:
+            if i-2*diff >= 0:
+                val = (pts[i][j] + pts[i-diff][j-diff] + pts[i-diff][j+diff] + pts[i-2*diff][j])/4
+            else:
+                val = (pts[i][j] + pts[i-diff][j-diff] + pts[i-diff][j+diff])/3
+            pts[i-diff][j] = val + random.uniform(-disp, disp)
 
-    if i2 + diff < size:
-        pts[i2][j1] = (pts[i1][j1] + pts[i2][j0]
-            + pts[i2][j2] + pts[i2+diff][j1]) / 4
-    else:
-        pts[i2][j1] = (pts[i1][j1] + pts[i2][j0]
-            + pts[i2][j2]) / 3
-    pts[i2][j1] = pts[i2][j1] + random.uniform(-disp, disp);
+            if i+2*diff < size:
+                val = (pts[i][j] + pts[i+diff][j-diff] + pts[i+diff][j+diff] + pts[i+2*diff][j])/4
+            else:
+                val = (pts[i][j] + pts[i+diff][j-diff] + pts[i+diff][j+diff])/3
+            pts[i+diff][j] = val + random.uniform(-disp, disp)
 
-    if j2 + diff < size:
-        pts[i1][j2] = (pts[i0][j2] + pts[i1][j1]
-            + pts[i2][j2] + pts[i1][j2+diff]) / 4
-    else:
-        pts[i1][j2] = (pts[i0][j2] + pts[i1][j1] + pts[i2][j2]) / 3
-    pts[i1][j2] = pts[i1][j2] + random.uniform(-disp, disp);
+            if j-2*diff >= 0:
+                val = (pts[i][j] + pts[i-diff][j-diff] + pts[i+diff][j-diff] + pts[i][j-2*diff])/4
+            else:
+                val = (pts[i][j] + pts[i-diff][j-diff] + pts[i+diff][j-diff])/3
+            pts[i][j-diff] = val + random.uniform(-disp, disp)
 
-    if i0 - diff >= 0:
-        pts[i0][j1] = (pts[i0][j0] + pts[i1][j1]
-            + pts[i0][j2] + pts[i0-diff][j1]) / 4
-    else:
-        pts[i0][j1] = (pts[i0][j0] + pts[i1][j1] + pts[i0][j2]) / 3
-    pts[i0][j1] = pts[i0][j1] + random.uniform(-disp, disp);
+            if j+2*diff < size:
+                val = (pts[i][j] + pts[i-diff][j+diff] + pts[i+diff][j+diff] + pts[i][j+2*diff])/4
+            else:
+                val = (pts[i][j] + pts[i-diff][j+diff] + pts[i+diff][j+diff])/3
+            pts[i][j+diff] = val + random.uniform(-disp, disp)
 
-
-    if diff == 1:
-        return
+            j = j + diff
+        i = i + diff
+    disp = disp * attenuation
     diff = diff / 2
-    pts[i0+diff][j0+diff] = (pts[i0][j0] + pts[i1][j0] + pts[i0][j1] +
-        pts[i1][j1]) / 4 + random.uniform(-disp, disp);
+    if diff > 0:
+        # tail-recursive, so cool
+        diamond_square(pts, disp, diff)
 
-    pts[i1+diff][j0+diff] = (pts[i1][j0] + pts[i2][j0] + pts[i2][j1] +
-        pts[i1][j1]) / 4 + random.uniform(-disp, disp);
-
-    pts[i1+diff][j1+diff] = (pts[i1][j1] + pts[i2][j1] + pts[i2][j2] +
-        pts[i1][j2]) / 4 + random.uniform(-disp, disp);
-
-    pts[i0+diff][j1+diff] = (pts[i0][j1] + pts[i1][j1] + pts[i1][j2] +
-        pts[i0][j2]) / 4 + random.uniform(-disp, disp);
-
-    diamond_square(pts, disp * attenuation, i0, j0, i1, j1)
-    diamond_square(pts, disp * attenuation, i1, j0, i2, j1)
-    diamond_square(pts, disp * attenuation, i1, j1, i2, j2)
-    diamond_square(pts, disp * attenuation, i0, j1, i1, j2)
 
 def make_face_indices(size):
     for i in xrange(size-1):
@@ -106,11 +98,12 @@ def generate_terrain(iter, disp):
     "return points(2d list of heights of correspoding coordinates) and\
     faces(triangles, linear indices in points)"
     size = 2**iter + 1
-    points = [[0.0 for i in xrange(size)] for j in xrange(size)]
+    points = [[random.uniform(-disp, disp)*0.1 for i in xrange(size)] for j in xrange(size)]
     faces = list(make_face_indices(size))
     random.seed()
-    points[size/2][size/2] = random.uniform(-disp, disp)
-    diamond_square(points, disp, 0, 0, size-1, size-1)
+    #points[size/2][size/2] = random.uniform(-disp, disp)
+    diff = (size-1)/2
+    diamond_square(points, disp, diff)
     return points, faces
 
 def print_pts(points, range):
