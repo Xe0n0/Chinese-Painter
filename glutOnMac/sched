@@ -1,0 +1,9 @@
+OK      0 cleanup obj-file
+OK      1 parse-obj-file
+OK      2 build vertex-face index
+OK      3 average vertex normal calculation
+OK      4 check vertices on profiles
+LATER   5 interpolate near profiles
+        6 solid thin stripe on profiles
+        7 diffuse-texture on near-profiles faces based on range
+        8 random-texture according to lighting

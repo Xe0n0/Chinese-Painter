@@ -38,7 +38,7 @@ const static GLfloat shininess = 0.7;
 
 
 const static GLfloat PI = 3.141592653589793;
-const static GLfloat PROFILE_ANGLE = 89.9;
+const static GLfloat PROFILE_ANGLE = 85;
 const static GLfloat PROFILE_DOTP = cos(PROFILE_ANGLE*PI/180.0);
 
 static png_image png;
@@ -52,6 +52,8 @@ static GLfloat frameRate;
 static GLfloat xangle = -90.0, yangle = 0.0, zangle = 0.0;
 static GLfloat xt = -2.0, yt = -1.0, zt = 0.0;
 
+static int windowWidth = initWidth, windowHeight = initHeight;
+
 static png_byte * row_pointers[initHeight];
 static png_byte bitmap[initWidth * initWidth * 3], 
        convertedBitmap[initWidth * initHeight * 3];
@@ -62,7 +64,6 @@ typedef struct {
     int faceCnt;
     int arrayLen;
     int *faces;
-    GLfloat avgNormal3f[3];
 }VertexRef;
 
 inline static void normalize3fv(GLfloat *v){
@@ -111,20 +112,64 @@ inline static GLfloat absDotProduct(GLfloat *va, GLfloat *vb){
 
 set<int> globalProfiles;
 
-static void getVertexOnProfile(vector<int> &profilePts, Model *model, GLfloat* eye3fv){
+static void getVertexOnProfile(set<int> &profilePts, Model *model, GLfloat* eye3fv){
     static GLfloat sight[3];
+    static GLfloat *vptr = model->vertex3fPtr;
+    static GLfloat *nptr = model->normal3fPtr;
+    static GLint *fptr = model->face6iPtr;
     profilePts.clear();
-    for (int vi = 0; vi < model->vertexN; vi ++){
+    for (int fi = 0; fi < model->faceN; fi++){
         // calculate dot-product of sight-vector and normal vector
-        sight[0] = model->vertex3fPtr[3*vi] - eye3fv[0];
-        sight[1] = model->vertex3fPtr[3*vi+1] - eye3fv[1];
-        sight[2] = model->vertex3fPtr[3*vi+2] - eye3fv[2];
-        normalize3fv(sight);
-        float dotp = absDotProduct(sight, model->normal3fPtr+3*vi);
-        if (dotp <= PROFILE_DOTP){
-            profilePts.push_back(vi);
+        for (int i = 0; i < 3; i++){
+            int vi = fptr[6*fi+2*i];
+            int ni = fptr[6*fi+2*i+1];
+            sight[0] = vptr[3*vi] - eye3fv[0];
+            sight[1] = vptr[3*vi+1] - eye3fv[1];
+            sight[2] = vptr[3*vi+2] - eye3fv[2];
+            normalize3fv(sight);
+            float dotp = absDotProduct(sight, nptr+3*ni);
+            if (dotp <= PROFILE_DOTP){
+                profilePts.insert(vi);
+            }
         }
     }
+}
+
+static void displayTransform(){
+    glLoadIdentity();
+    glTranslatef(0.0,0.0,-3.0);
+    glTranslatef(xt,yt,zt);
+    glRotatef(xangle,1.0,0.0,0.0);
+    glRotatef(yangle,0.0,1.0,0.0);
+    glRotatef(zangle,0.0,0.0,1.0);
+}
+
+static GLfloat *windowCenterCoord(){
+    static GLint viewport[4];
+    static GLdouble modelview[16];
+    static GLdouble projection[16];
+    static GLdouble winX, winY, winZ;
+    static GLdouble posX, posY, posZ;
+    static GLfloat obj[3];
+    glPushMatrix();
+    displayTransform();
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    glGetDoublev(GL_MODELVIEW_MATRIX, modelview);
+    glGetDoublev(GL_PROJECTION_MATRIX, projection);
+    glPopMatrix();
+    winX = windowWidth / 2;
+    winY = windowHeight / 2;
+    winZ = 0;
+    bool res = gluUnProject(winX, winY, winZ, modelview, 
+        projection, viewport, &posX, &posY, &posZ);
+    if (!res){
+        fprintf(stderr, "failed converting coordinates.\n");
+        exit(1);
+    }
+    obj[0] = posX;
+    obj[1] = posY;
+    obj[2] = posZ;
+    return obj;
 }
 
 static Model *loadOBJModel(const char* filename){
@@ -162,15 +207,17 @@ static Model *loadOBJModel(const char* filename){
     // *** vertex ref starts from 1 ***
     // *** vi, fi are array subscript, starts from 0 ***
     int vi = 0, fi = 0, ni = 0;
-    VertexRef *vrefPtr = new VertexRef[vertexN];
+    static VertexRef *vrefPtr = new VertexRef[vertexN];
     GLfloat *vertex3fPtr = new GLfloat[3 * vertexN];
     GLfloat *normal3fPtr = new GLfloat[3 * normalN];
     GLint *face6iPtr = new GLint[6 * faceN];
+    GLfloat *avgNormal3fPtr = new GLfloat[3 * vertexN];
     GLfloat *vptr = vertex3fPtr;
     GLfloat *nptr = normal3fPtr;
     GLint *fptr = face6iPtr;
 
     memset(vrefPtr, 0, sizeof(VertexRef)*vertexN);
+    memset(avgNormal3fPtr, 0, sizeof(float)*3*vertexN);
 
     fprintf(stderr, "f:%d v:%d\n", faceN, vertexN);
 
@@ -214,9 +261,11 @@ static Model *loadOBJModel(const char* filename){
                 vfp->faces[vfp->faceCnt] = fi;
                 vfp->faceCnt++;
                 // add face normal to vertex normal
-                // vn3fPtr[fptr[i]] += normal[0];
-                // vn3fPtr[fptr[i]+1] += normal[1];
-                // vn3fPtr[fptr[i]+2] += normal[2];
+                GLfloat *avgnptr = avgNormal3fPtr + fptr[i*2]*3;
+                GLfloat *nptr = normal3fPtr + fptr[i*2+1];
+                avgnptr[0] += nptr[0];
+                avgnptr[1] += nptr[1];
+                avgnptr[2] += nptr[2];
             }
             fptr += 6;
             fi++;
@@ -226,14 +275,14 @@ static Model *loadOBJModel(const char* filename){
             break;
         }
     }
-    // for (vi = 0; vi < vertexN; vi++){
-    //     calculate average vertex normal
-    //     normalize3fv(vn3fPtr + 3*vi);
-    //     vn3fPtr[3*vi] /= vrefPtr[vi].faceCnt;
-    //     vn3fPtr[3*vi+1] /= vrefPtr[vi].faceCnt;
-    //     vn3fPtr[3*vi+2] /= vrefPtr[vi].faceCnt;
-    // }
-    static Model model = {faceN, vertexN, normalN, scale, vertex3fPtr, normal3fPtr, face6iPtr, vrefPtr};
+    for (vi = 0; vi < vertexN; vi++){
+        // calculate average vertex normal        
+        avgNormal3fPtr[3*vi] /= vrefPtr[vi].faceCnt;
+        avgNormal3fPtr[3*vi+1] /= vrefPtr[vi].faceCnt;
+        avgNormal3fPtr[3*vi+2] /= vrefPtr[vi].faceCnt;
+    }
+    static Model model = {faceN, vertexN, normalN, scale, vertex3fPtr, 
+        normal3fPtr, face6iPtr, vrefPtr, NULL, avgNormal3fPtr};
     return &model;
 }
 
@@ -246,6 +295,8 @@ static void changeView(){
 
 static void reshape(int width, int height)
 {
+    windowWidth = width;
+    windowHeight = height;
     glViewport(0, 0, width, height);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -289,28 +340,35 @@ static void drawSomething(Model *model){
     static GLfloat *vnptr = model->normal3fPtr;
     static GLint *fptr;
     static GLint a, b, c;
+    GLfloat *eye3fv;
+    eye3fv = windowCenterCoord();
+    getVertexOnProfile(globalProfiles, globalModel, eye3fv);
+    glColor3f(1.0, 0.0, 0.0);
+    glPointSize(4.0);
+    glBegin(GL_POINTS);{
+        for (set<int>::iterator it = globalProfiles.begin(); 
+            it != globalProfiles.end(); it++){
+            glVertex3fv(vptr+3*(*it));
+        }
+    }
+    glEnd();
     glColor3f(1.0, 1.0, 1.0);
-    for (int i = 0; i < model->faceN; ++i){
-        fptr = model->face6iPtr + 6*i;
-        glBegin(GL_TRIANGLES);
-        {
+    glBegin(GL_TRIANGLES);
+    {
+        for (int i = 0; i < model->faceN; ++i){
+            fptr = model->face6iPtr + 6*i;
             glNormal3fv(vnptr+3*fptr[1]);
-            if (testOnProfiles(vnptr+3*fptr[1]))
-                globalProfiles.insert(fptr[0]);
             glVertex3fv(vptr+3*fptr[0]);
 
             glNormal3fv(vnptr+3*fptr[3]);
-            if (testOnProfiles(vnptr+3*fptr[3]))
-                globalProfiles.insert(fptr[2]);
             glVertex3fv(vptr+3*fptr[2]);
             
             glNormal3fv(vnptr+3*fptr[5]);
-            if (testOnProfiles(vnptr+3*fptr[5]))
-                globalProfiles.insert(fptr[4]);
             glVertex3fv(vptr+3*fptr[4]);
         }
-        glEnd();
     }
+    glEnd();
+    // fprintf(stderr, "points on profile %ld\n", globalProfiles.size());
 }
 
 
@@ -334,6 +392,7 @@ static void drawAxis(){
     glEnd();
 }
 
+
 static void display(){
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glColor3f(1.0, 1.0, 1.0);
@@ -346,20 +405,16 @@ static void display(){
     
 
     glPushMatrix();
-    glLoadIdentity();
-    glTranslatef(0.0,0.0,-3.0);
-    glTranslatef(xt,yt,zt);
-    glRotatef(xangle,1.0,0.0,0.0);
-    glRotatef(yangle,0.0,1.0,0.0);
-    glRotatef(zangle,0.0,0.0,1.0);
 
+    displayTransform();
+    
     drawAxis();
 
     drawSomething(globalModel);
 
     //glutSolidTorus(0.4,1.0,20,20);
     glPopMatrix();
-    glFlush();    
+    glFlush();
     glutSwapBuffers();
 }
 
@@ -412,6 +467,8 @@ static void keyboard(GLubyte key, GLint x, GLint y)
     }
     changeView();
     glutPostRedisplay();
+    // GLfloat *coord = windowCenterCoord();
+    // fprintf(stderr, "center: %f %f %f\n", coord[0], coord[1], coord[2]);
 }
 
 static void initPNG(){
@@ -449,7 +506,7 @@ static void idle(){
     currentTime = glutGet(GLUT_ELAPSED_TIME);
     if (currentTime - lastFPSTime >= FPS_SAMPLE_INTERVAL){
         frameRate = (GLfloat) frameCnt / (currentTime - lastFPSTime) * 1000.0;
-        printf("FPS: %.2f\n", frameRate);
+        // printf("FPS: %.2f\n", frameRate);
         frameCnt = 0;
         lastFPSTime = currentTime;
     }
